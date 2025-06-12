@@ -1,6 +1,9 @@
 import pandas as pd
 import requests
 import json
+from flask import Flask, render_template
+
+app = Flask(__name__)
 
 def fetch_sales_data(file_path):
     """
@@ -31,6 +34,10 @@ def send_data_to_webhook(data, url):
     except requests.exceptions.RequestException as e:
         print(f"Error sending data to webhook: {e}")
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 if __name__ == "__main__":
     excel_file = "daily sales.xlsx"
     sales_data = fetch_sales_data(excel_file)
@@ -44,3 +51,5 @@ if __name__ == "__main__":
 
         webhook_url = "http://localhost:5678/webhook-test/46351b0f-1a6a-4f90-9507-9f633b03aa6b"
         send_data_to_webhook(sales_data.to_dict(orient='records'), webhook_url)
+    
+    app.run(debug=True)
