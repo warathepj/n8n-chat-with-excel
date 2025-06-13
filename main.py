@@ -1,9 +1,38 @@
 import pandas as pd
 import requests
 import json
-from flask import Flask, render_template
+import os
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
+
+CHAT_WEBHOOK_URL = 'http://localhost:5678/webhook-test/46351b0f-1a6a-4f90-9507-9f633b03aa6b'
+
+# Global variable to track if sales data has been sent in the current session
+first_message_sent = False
+sales_data_global = None # To store sales data once fetched
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    global first_message_sent
+    global sales_data_global
+
+    user_message = request.json.get('message')
+    if user_message:
+        data_to_send = {'message': user_message}
+        
+        if not first_message_sent and sales_data_global is not None:
+            data_to_send['sales_data'] = sales_data_global
+            first_message_sent = True
+            print("Sales data included in the first chat message.")
+        
+        # Send the combined data to the chat webhook
+        send_data_to_webhook(data_to_send, CHAT_WEBHOOK_URL)
+        bot_response = f"Your message: '{user_message}' has been sent to the chat webhook."
+        if 'sales_data' in data_to_send:
+            bot_response += " (Sales data also sent as it's the first message)."
+        return jsonify({'response': bot_response})
+    return jsonify({'error': 'No message provided'}), 400
 
 def fetch_sales_data(file_path):
     """
@@ -48,8 +77,11 @@ if __name__ == "__main__":
         for col in sales_data.columns:
             if pd.api.types.is_datetime64_any_dtype(sales_data[col]):
                 sales_data[col] = sales_data[col].apply(lambda x: x.isoformat())
+        
+        # Assign sales_data to the global variable
+        sales_data_global = sales_data.to_dict(orient='records')
 
-        webhook_url = "http://localhost:5678/webhook-test/46351b0f-1a6a-4f90-9507-9f633b03aa6b"
-        send_data_to_webhook(sales_data.to_dict(orient='records'), webhook_url)
+        # The initial send of sales_data to webhook is removed as per the task.
+        # It will now only be sent with the first chat message.
     
     app.run(debug=True)

@@ -105,10 +105,26 @@
                 inputField.value = '';
                 // Here you would typically send the message to a backend/bot
                 // and then display the bot's response.
-                // For now, let's simulate a bot response.
-                setTimeout(() => {
-                    addMessage("I'm processing your request: " + messageText, 'bot');
-                }, 1000);
+                // Send message to backend
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message: messageText })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.response) {
+                        addMessage(data.response, 'bot');
+                    } else if (data.error) {
+                        addMessage("Error: " + data.error, 'bot');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addMessage("Sorry, something went wrong.", 'bot');
+                });
             }
         });
 
